@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: neon-air-hockey
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: NODE_VERSION
+        value: "20"
