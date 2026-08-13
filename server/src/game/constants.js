@@ -9,8 +9,10 @@ export const FIELD = {
   puckFriction: 0.9965,
   maxPuckSpeed: 26,
   minPaddleSpeed: 0,
-  maxPaddleSpeed: 34, // units per tick
+  maxPaddleSpeed: 48, // units per tick — snappy follow without teleporting
   tickHz: 60,
+  /** Network snapshots per second (physics still runs at tickHz). */
+  emitHz: 30,
   countdownMs: 3000,
   goalPauseMs: 1200,
 };

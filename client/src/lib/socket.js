@@ -4,7 +4,10 @@ import { io } from 'socket.io-client';
 // from the sandbox preview host, localhost, or a LAN IP without any config.
 export const socket = io('/', {
   autoConnect: true,
-  transports: ['websocket', 'polling'],
+  // Prefer websocket immediately — polling feels laggy on remote hosts.
+  transports: ['websocket'],
+  upgrade: false,
+  rememberUpgrade: true,
 });
 
 export const api = {

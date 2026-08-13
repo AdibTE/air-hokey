@@ -243,9 +243,23 @@ async function startMatch(io, lobby) {
   });
 
   const room = rooms.get(code);
-  room.interval = setInterval(async () => {
+  const emitEvery = Math.max(1, Math.round(FIELD.tickHz / (FIELD.emitHz || 30)));
+  let tick = 0;
+  let lastHud = '';
+
+  room.interval = setInterval(() => {
     const event = engine.step();
-    io.to(code).emit('game:state', engine.snapshot());
+    tick += 1;
+
+    const snap = engine.snapshot();
+    const hudKey = `${snap.score.home}:${snap.score.away}:${snap.status}:${snap.countdown}:${snap.remaining}`;
+    const hudChanged = hudKey !== lastHud;
+    if (hudChanged) lastHud = hudKey;
+
+    // Physics @60Hz; network snapshots ~30Hz (always flush on HUD/events).
+    if (tick % emitEvery === 0 || event || hudChanged) {
+      io.to(code).emit('game:state', snap);
+    }
 
     if (event?.type === 'goal') {
       io.to(code).emit('game:goal', { scorer: event.scorer, score: engine.score });
@@ -258,18 +272,23 @@ async function startMatch(io, lobby) {
         score: engine.score,
         players,
       });
-      await saveMatch(code, lobby, engine, event, players);
-      const fresh = await lobbyRepo.findByCode(code);
-      if (fresh) {
-        fresh.status = 'waiting';
-        fresh.players.forEach((p) => {
-          p.ready = false;
-        });
-        await lobbyRepo.save(fresh);
-        io.to(code).emit('lobby:state', await lobbyStateSafe(fresh));
-      }
+      // Persist off the hot path so the tick loop never awaits I/O.
+      void finishMatch(io, code, lobby, engine, event, players);
     }
   }, 1000 / FIELD.tickHz);
+}
+
+async function finishMatch(io, code, lobby, engine, event, players) {
+  await saveMatch(code, lobby, engine, event, players);
+  const fresh = await lobbyRepo.findByCode(code);
+  if (fresh) {
+    fresh.status = 'waiting';
+    fresh.players.forEach((p) => {
+      p.ready = false;
+    });
+    await lobbyRepo.save(fresh);
+    io.to(code).emit('lobby:state', await lobbyStateSafe(fresh));
+  }
 }
 
 async function lobbyStateSafe(lobby) {

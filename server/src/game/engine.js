@@ -224,11 +224,28 @@ export class GameEngine {
   }
 
   snapshot() {
+    const { home, away } = this.paddles;
     return {
-      puck: { x: +this.puck.x.toFixed(2), y: +this.puck.y.toFixed(2) },
+      t: Date.now(),
+      puck: {
+        x: +this.puck.x.toFixed(2),
+        y: +this.puck.y.toFixed(2),
+        vx: +this.puck.vx.toFixed(2),
+        vy: +this.puck.vy.toFixed(2),
+      },
       paddles: {
-        home: { x: +this.paddles.home.x.toFixed(2), y: +this.paddles.home.y.toFixed(2) },
-        away: { x: +this.paddles.away.x.toFixed(2), y: +this.paddles.away.y.toFixed(2) },
+        home: {
+          x: +home.x.toFixed(2),
+          y: +home.y.toFixed(2),
+          vx: +home.vx.toFixed(2),
+          vy: +home.vy.toFixed(2),
+        },
+        away: {
+          x: +away.x.toFixed(2),
+          y: +away.y.toFixed(2),
+          vx: +away.vx.toFixed(2),
+          vy: +away.vy.toFixed(2),
+        },
       },
       score: { ...this.score },
       status: this.status,

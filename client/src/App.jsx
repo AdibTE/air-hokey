@@ -3,6 +3,7 @@ import Home from './components/Home';
 import LobbyRoom from './components/LobbyRoom';
 import Game from './components/Game';
 import { api, socket } from './lib/socket';
+import { clearGameSnapshot, hudChanged, pushGameSnapshot } from './lib/gameStream';
 
 const DEFAULT_FIELD = {
   width: 1000,
@@ -35,13 +36,15 @@ export default function App() {
 
   const [lobby, setLobby] = useState(null);
   const [mySlot, setMySlot] = useState(null);
-  const [gameState, setGameState] = useState(null);
+  // HUD-only React state (score / status) — positions stream via gameStream.
+  const [gameHud, setGameHud] = useState(null);
   const [gamePlayers, setGamePlayers] = useState({});
   const [gameSettings, setGameSettings] = useState({ goalLimit: 7, timeLimit: 180 });
   const [result, setResult] = useState(null);
   const [toast, setToast] = useState('');
 
   const toastTimer = useRef(null);
+  const hudRef = useRef(null);
   const showToast = useCallback((msg) => {
     setToast(msg);
     clearTimeout(toastTimer.current);
@@ -78,10 +81,24 @@ export default function App() {
       setGamePlayers(players);
       setGameSettings(settings);
       setResult(null);
-      setGameState(null);
+      hudRef.current = null;
+      setGameHud(null);
+      clearGameSnapshot();
       setScreen('game');
     };
-    const onState = (s) => setGameState(s);
+    const onState = (s) => {
+      pushGameSnapshot(s);
+      if (hudChanged(hudRef.current, s)) {
+        const hud = {
+          score: s.score,
+          status: s.status,
+          countdown: s.countdown,
+          remaining: s.remaining,
+        };
+        hudRef.current = hud;
+        setGameHud(hud);
+      }
+    };
     const onGoal = ({ scorer }) => {
       const who = scorer === mySlot ? 'You scored!' : 'Opponent scored';
       showToast(who);
@@ -134,20 +151,20 @@ export default function App() {
     socket.emit('lobby:leave');
     setLobby(null);
     setMySlot(null);
-    setGameState(null);
+    setGameHud(null);
+    hudRef.current = null;
+    clearGameSnapshot();
     setResult(null);
     setScreen('home');
   }, []);
 
   const backToLobby = useCallback(() => {
     setResult(null);
-    setGameState(null);
+    setGameHud(null);
+    hudRef.current = null;
+    clearGameSnapshot();
     setScreen('lobby');
   }, []);
-
-  // Note: navigation away from the game screen is explicit (result overlay ->
-  // "Back to lobbies", or leaving the lobby). An automatic "lobby is waiting ->
-  // go back" effect would race with game:start and eject players immediately.
 
   return (
     <div className="app">
@@ -172,7 +189,7 @@ export default function App() {
           field={field}
           players={gamePlayers}
           settings={gameSettings}
-          state={gameState}
+          state={gameHud}
           result={result}
           mySlot={mySlot}
           onRematch={() => socket.emit('game:rematch')}

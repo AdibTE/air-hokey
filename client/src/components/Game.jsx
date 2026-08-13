@@ -12,10 +12,10 @@ export default function Game({ field, players, settings, state, result, mySlot, 
     if (!result) setRematchSent(false);
   }, [result]);
 
-  // Throttle input to ~60/s so we never flood the socket.
+  // Throttle input to ~45/s — enough for smooth play without flooding Render.
   const handleInput = useCallback((x, y) => {
     const now = performance.now();
-    if (now - lastSent.current < 15) return;
+    if (now - lastSent.current < 22) return;
     lastSent.current = now;
     socket.emit('game:input', { x, y });
   }, []);
@@ -56,7 +56,7 @@ export default function Game({ field, players, settings, state, result, mySlot, 
       </div>
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 1000 }}>
-        <Rink field={field} state={state} players={players} mySlot={mySlot} onInput={handleInput} />
+        <Rink field={field} players={players} mySlot={mySlot} onInput={handleInput} />
 
         {state?.status === 'countdown' && !result && (
           <div className="overlay">
